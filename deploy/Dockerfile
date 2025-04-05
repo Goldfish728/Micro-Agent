@@ -33,7 +33,7 @@ RUN mkdir -p /var/run/sshd \
 WORKDIR /app 
  
 # Copy the current directory contents into the container at /app 
-COPY . /app 
+COPY ../ /app 
  
 # Install any needed packages specified in requirements.txt 
 RUN pip install -r requirements.txt 
@@ -42,5 +42,6 @@ RUN pip install -r requirements.txt
 # Make port 5000 available to the world outside this container 
 EXPOSE 8010 22 8000
  
-# 启动SSH服务并保持容器运行
-CMD service ssh start && bash
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+CMD ["/start.sh"]
