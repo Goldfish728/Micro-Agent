@@ -4,6 +4,9 @@ services:
   micro_agent:
     build: .
     container_name: micro_agent
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
     ports:
       - "8010:5000"
       - "18000:8000"

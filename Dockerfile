@@ -16,6 +16,7 @@ RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm main contrib
         vim-runtime \
         xauth \
         xxd \
+        iproute2 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
