@@ -20,6 +20,7 @@ RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm main contrib
         wget \
         unzip \
         zip \
+        iproute2 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
