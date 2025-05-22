@@ -9,6 +9,7 @@ from app.tool.file_saver import FileSaver
 from app.tool.remote_docker_manager import RemoteDockerManager
 from app.tool.cmd import Cmd
 from app.tool.terminal import Terminal
+from app.tool.handoff import Handoff
 
 __all__ = [
     "BaseTool",
@@ -22,4 +23,5 @@ __all__ = [
     "RemoteDockerManager",
     "Cmd",
     "Terminal",
+    "Handoff",
 ]

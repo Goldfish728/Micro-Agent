@@ -1,9 +1,10 @@
 from app.tool.base import BaseTool
 
 
-_TERMINATE_DESCRIPTION = """Terminate the interaction when the request is met OR if the assistant cannot proceed further with the task.
-When you have finished all the tasks, call this tool to end the work."""
+# _TERMINATE_DESCRIPTION = """Terminate the interaction when the request is met OR if the assistant cannot proceed further with the task.
+# When you have finished all the tasks, call this tool to end the work."""
 
+_TERMINATE_DESCRIPTION = """When every agent has finished all the tasks and no need to cooperate with other agents, call this tool to end the work."""
 
 class Terminate(BaseTool):
     name: str = "terminate"

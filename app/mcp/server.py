@@ -31,7 +31,7 @@ from app.tool.python_execute import PythonExecute
 from app.tool.terminal import Terminal
 from app.tool.cmd import Cmd
 from app.tool.bash import Bash
-
+from app.tool.handoff import Handoff
 class MCPServer:
     """集成旧工具类的MCP服务器实现，包含工具注册和管理。"""
 
@@ -53,6 +53,7 @@ class MCPServer:
         self.tools["file_transfer"] = FileTransfer()
         self.tools["file_saver"] = FileSaver()
         self.tools["json_saver"] = JsonSaver()
+        self.tools["handoff"] = Handoff()
         # self.tools["python_execute"] = PythonExecute()
         # self.tools["terminal"] = Terminal()
 

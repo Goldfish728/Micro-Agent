@@ -39,7 +39,7 @@ class MCPAgent(ToolCallAgent):
     _refresh_tools_interval: int = 5  # 每N步刷新工具列表
 
     # 应触发终止的特殊工具名称
-    special_tool_names: List[str] = Field(default_factory=lambda: ["terminate"])
+    special_tool_names: List[str] = Field(default_factory=lambda: ["terminate", "handoff"])
 
     async def initialize(
         self,
@@ -269,7 +269,7 @@ class MCPAgent(ToolCallAgent):
     async def _handle_special_tool(self, name: str, result: Any, **kwargs) -> None:
         """处理特殊工具执行和状态变化"""
         # 首先使用父处理程序处理
-        await super()._handle_special_tool(name, result, **kwargs)
+        # await super()._handle_special_tool(name, result, **kwargs)
 
         # 处理多媒体响应
         if isinstance(result, ToolResult) and result.base64_image:
@@ -288,12 +288,25 @@ class MCPAgent(ToolCallAgent):
             )
             # 立即标记为已完成，确保清理过程能够正确执行
             self.state = AgentState.FINISHED
+        
+        # 特别处理handoff工具
+        if name.lower() == "handoff" or name.endswith("_handoff"):
+            logger.info(f"执行交接工具 {name}")
+            self.memory.add_message(
+                Message.system_message(f"交接工具已执行: {name}")
+            )
+            self.state = AgentState.FINISHED
 
     def _should_finish_execution(self, name: str, **kwargs) -> bool:
         """确定工具执行是否应该结束智能体"""
         # 如果工具名称是'terminate'则终止（无论是原始名称还是带服务器ID前缀的名称）
         if name.lower() == "terminate" or name.endswith("_terminate"):
             logger.info(f"接收到终止命令: {name}，准备结束会话")
+            self.state = AgentState.FINISHED
+            return True
+        # 如果工具名称是'handoff'则结束（无论是原始名称还是带服务器ID前缀的名称）
+        if name.lower() == "handoff" or name.endswith("_handoff"):
+            logger.info(f"接收到交接命令: {name}，准备结束会话")
             self.state = AgentState.FINISHED
             return True
         return False
@@ -370,27 +383,27 @@ class MCPAgent(ToolCallAgent):
             # 在异常情况下也应该标记为已完成
             self.state = AgentState.FINISHED
             raise
-        finally:
-            # 确保即使出现错误也只尝试清理一次
-            if not cleanup_attempted:
-                cleanup_attempted = True
-                try:
-                    # 直接调用cleanup方法但不等待其完成
-                    # 这里不使用wait_for和shield，因为它们会导致cancel scope问题
-                    logger.info("开始后台清理资源...")
+        # finally:
+        #     # 确保即使出现错误也只尝试清理一次
+        #     if not cleanup_attempted:
+        #         cleanup_attempted = True
+        #         try:
+        #             # 直接调用cleanup方法但不等待其完成
+        #             # 这里不使用wait_for和shield，因为它们会导致cancel scope问题
+        #             logger.info("开始后台清理资源...")
                     
-                    # 使用一个分离的、完全独立的函数来启动清理
-                    async def run_detached_cleanup():
-                        try:
-                            await self.cleanup()
-                        except Exception as e:
-                            logger.error(f"分离的清理过程中出错: {str(e)}")
+        #             # 使用一个分离的、完全独立的函数来启动清理
+        #             async def run_detached_cleanup():
+        #                 try:
+        #                     await self.cleanup()
+        #                 except Exception as e:
+        #                     logger.error(f"分离的清理过程中出错: {str(e)}")
                     
-                    # 创建任务但不等待其完成
-                    asyncio.create_task(run_detached_cleanup())
+        #             # 创建任务但不等待其完成
+        #             asyncio.create_task(run_detached_cleanup())
                     
-                    # 确保不会有任何等待操作，直接返回
-                    logger.info("清理任务已在后台启动，主程序可以继续执行")
-                except Exception as cleanup_error:
-                    logger.error(f"启动清理任务时发生错误: {str(cleanup_error)}")
-                    # 错误已记录，但不重新抛出，让程序能继续执行
+        #             # 确保不会有任何等待操作，直接返回
+        #             logger.info("清理任务已在后台启动，主程序可以继续执行")
+        #         except Exception as cleanup_error:
+        #             logger.error(f"启动清理任务时发生错误: {str(cleanup_error)}")
+        #             # 错误已记录，但不重新抛出，让程序能继续执行

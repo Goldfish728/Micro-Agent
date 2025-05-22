@@ -8,7 +8,7 @@ from app.exceptions import TokenLimitExceeded
 from app.logger import logger
 from app.prompt.toolcall import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.schema import TOOL_CHOICE_TYPE, AgentState, Message, ToolCall, ToolChoice, TokenUsage
-from app.tool import CreateChatCompletion, Terminate, ToolCollection
+from app.tool import CreateChatCompletion, Terminate, ToolCollection, Handoff
 
 
 TOOL_CALL_REQUIRED = "Tool calls required but none provided"
@@ -27,7 +27,7 @@ class ToolCallAgent(ReActAgent):
         CreateChatCompletion(), Terminate()
     )
     tool_choices: TOOL_CHOICE_TYPE = ToolChoice.AUTO  # type: ignore
-    special_tool_names: List[str] = Field(default_factory=lambda: [Terminate().name])
+    special_tool_names: List[str] = Field(default_factory=lambda: [Terminate().name, Handoff().name])
 
     tool_calls: List[ToolCall] = Field(default_factory=list)
     _current_base64_image: Optional[str] = None
