@@ -3,9 +3,14 @@ import os
 import time
 import subprocess
 import dotenv
+import json
+import asyncio
 from dataclasses import dataclass
 from typing import List, Dict
 from app.logger import logger
+
+# 导入QUIC客户端函数
+from .quic_file_client import run_quic_client
 
 dotenv.load_dotenv()
 
@@ -45,8 +50,16 @@ async def run_quic_test(
             - 每次测试的具体数据
     """
 
+    # 加载配置文件
+    try:
+        with open(config_path, 'r') as f:
+            config_dict = json.load(f)
+    except Exception as e:
+        return f"[ERROR] 无法加载配置文件 {config_path}: {e}"
+
     # 服务器信息
-    CLIENT_CMD = f"python {os.getenv('WORK_DIR')}/quic_file_client.py download --file {file_name} --save {save_name} --config {config_path}"
+    host = "118.89.124.177"  # 默认服务器地址
+    port = 4433  # 默认端口
 
     # 1. 设置网络模拟 (RTT + 丢包)
     os.system("sudo tc qdisc del dev eth0 root 2>/dev/null || true")  # 清除旧规则
@@ -54,16 +67,54 @@ async def run_quic_test(
 
     download_time_list = []
     for i in range(10):
-        # 2. 运行一次下载测试
-        start_time = time.time()
-        process = subprocess.run(CLIENT_CMD, shell=True, capture_output=True, text=True)
-        logger.info(process.stdout)
-        logger.info(process.stderr)
-        end_time = time.time()
-
-        # 3. 计算下载时间
-        download_time = end_time - start_time
-        download_time_list.append(download_time)
+        # 2. 运行一次下载测试，失败时重试直到成功
+        logger.info(f"\n第{i+1}次下载开始")
+        
+        # 重试机制：失败时重新尝试直到成功
+        download_success = False
+        retry_count = 0
+        
+        while not download_success:
+            if retry_count > 0:
+                logger.info(f"第{i+1}次下载重试第{retry_count}次")
+            
+            start_time = time.time()
+            
+            # 直接调用QUIC客户端函数而不是subprocess
+            try:
+                success = await run_quic_client(
+                    host=host,
+                    port=port,
+                    action="download",
+                    file_path=file_name,
+                    save_path=save_name,
+                    config_dict=config_dict
+                )
+                if success:
+                    download_success = True
+                    end_time = time.time()
+                    # 3. 计算下载时间
+                    download_time = end_time - start_time
+                    logger.info(f"第{i+1}次下载成功，下载时间: {download_time:.3f}s")
+                    if retry_count > 0:
+                        logger.info(f"经过{retry_count}次重试后成功")
+                    download_time_list.append(download_time)
+                else:
+                    logger.error(f"第{i+1}次下载失败，准备重试...")
+                    retry_count += 1
+                    # 清理可能存在的不完整文件
+                    if os.path.exists(save_name):
+                        os.remove(save_name)
+                    # 短暂等待后重试
+                    await asyncio.sleep(1)
+            except Exception as e:
+                logger.error(f"第{i+1}次下载时发生错误: {e}，准备重试...")
+                retry_count += 1
+                # 清理可能存在的不完整文件
+                if os.path.exists(save_name):
+                    os.remove(save_name)
+                # 短暂等待后重试
+                await asyncio.sleep(1)
 
     average_download_time = sum(download_time_list) / len(download_time_list)
 
